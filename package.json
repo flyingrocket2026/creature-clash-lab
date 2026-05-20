@@ -5,14 +5,17 @@
   "type": "module",
   "scripts": {
     "build": "vite build && mkdir -p dist/assets && cp -R assets/models assets/sprites dist/assets/",
-    "preview": "vite preview --host 0.0.0.0",
-    "dev": "vite --host 0.0.0.0"
+    "preview": "npm run build && wrangler dev",
+    "dev": "vite --host 0.0.0.0",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "pngjs": "^7.0.0",
     "three": "^0.164.1"
   },
   "devDependencies": {
-    "vite": "^6.4.2"
+    "@cloudflare/vite-plugin": "^1.37.2",
+    "vite": "^6.4.2",
+    "wrangler": "^4.93.0"
   }
 }
