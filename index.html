@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Creature Clash Lab</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="game-board" aria-labelledby="game-title">
+        <div class="title-row">
+          <div>
+            <p class="eyebrow">Creature Clash Lab</p>
+            <h1 id="game-title">Pick two challengers. Guess the winner. Learn why.</h1>
+          </div>
+          <button class="icon-button" id="randomizeButton" type="button" aria-label="Random matchup" title="Random matchup">↻</button>
+        </div>
+
+        <div class="setup-grid">
+          <article class="fighter-panel" aria-labelledby="fighter-a-label">
+            <label id="fighter-a-label" for="fighterA">Challenger A</label>
+            <select id="fighterA"></select>
+            <div class="creature-card" id="cardA"></div>
+          </article>
+
+          <section class="arena-stage" aria-label="Battle arena">
+            <div class="arena-controls">
+              <label for="arenaSelect">Arena</label>
+              <select id="arenaSelect"></select>
+            </div>
+            <div class="stage" id="stage">
+              <canvas class="arena-canvas" id="arenaCanvas" aria-hidden="true"></canvas>
+              <div class="arena-badge" id="roundBadge">Pick your winner</div>
+              <div class="effect-burst" id="effectBurst" aria-hidden="true">POOF!</div>
+              <div class="fighter-token left" id="tokenA"></div>
+              <div class="versus">VS</div>
+              <div class="fighter-token right" id="tokenB"></div>
+            </div>
+            <div class="prediction-card">
+              <p class="prediction-title">Who do you think will win?</p>
+              <div class="guess-row" role="group" aria-label="Guess winner">
+                <button type="button" class="guess-button" data-guess="a" id="guessA">A wins</button>
+                <button type="button" class="guess-button" data-guess="b" id="guessB">B wins</button>
+              </div>
+            </div>
+            <button class="battle-button" id="battleButton" type="button" disabled>Lock your guess first</button>
+          </section>
+
+          <article class="fighter-panel" aria-labelledby="fighter-b-label">
+            <label id="fighter-b-label" for="fighterB">Challenger B</label>
+            <select id="fighterB"></select>
+            <div class="creature-card" id="cardB"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="results-layout" aria-live="polite">
+        <article class="result-panel">
+          <p class="section-label">Result</p>
+          <h2 id="winnerTitle">Set up a battle to begin.</h2>
+          <p id="winnerReason">Choose an arena, make a guess, and run the first matchup.</p>
+          <div class="score-strip" id="scoreStrip"></div>
+        </article>
+
+        <article class="result-panel">
+          <p class="section-label">Battle Replay</p>
+          <ol class="replay-list" id="replayList">
+            <li>The lab crew is adjusting the confetti cannons.</li>
+          </ol>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
