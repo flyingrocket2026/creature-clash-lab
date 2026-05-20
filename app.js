@@ -1615,7 +1615,6 @@ function replayLines(winner, loser, arena, margin) {
     `${loser.name} tries to reset the fight and steal momentum near the edge of the arena.`,
     closeLine,
     `${winner.name} finds the cleanest opening of the round and turns it into the deciding move.`,
-    `Lesson: matchups depend on habitat, body design, and special adaptations, not just who looks scarier.`,
   ];
 }
 
