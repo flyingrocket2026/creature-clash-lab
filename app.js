@@ -158,6 +158,9 @@ const arenas = [
   { id: 'ice', name: 'Ice Floes', className: 'ice', bonus: 'Cold-weather bulk and balance matter here.' },
 ];
 
+const battleDurationMs = 11200;
+const replayBeatMs = 1650;
+
 const selectors = {
   fighterA: document.querySelector('#fighterA'),
   fighterB: document.querySelector('#fighterB'),
@@ -1295,21 +1298,31 @@ function getFightFrame(now) {
 
   if (!arena3d?.fight) return empty;
 
-  const elapsed = Math.min((now - arena3d.fight.startedAt) / 5600, 1);
+  const elapsed = Math.min((now - arena3d.fight.startedAt) / battleDurationMs, 1);
   const winnerSide = arena3d.fight.winnerSide === 'a' ? -1 : 1;
   const loserSide = -winnerSide;
-  const attackerSide = elapsed < 0.48 ? loserSide : winnerSide;
+  const attackerSide = elapsed < 0.22 || (elapsed > 0.42 && elapsed < 0.56) ? loserSide : winnerSide;
   const defenderSide = -attackerSide;
-  const impact = pulse(elapsed, 0.57, 0.08) + pulse(elapsed, 0.78, 0.1);
+  const impact = (
+    pulse(elapsed, 0.22, 0.05) * 0.45
+    + pulse(elapsed, 0.39, 0.06) * 0.55
+    + pulse(elapsed, 0.58, 0.07) * 0.75
+    + pulse(elapsed, 0.78, 0.09)
+    + pulse(elapsed, 0.91, 0.07) * 0.65
+  );
 
   return {
     progress: elapsed,
     attackerSide,
     defenderSide,
     impact: Math.min(1, impact),
-    recoil: smoothstep(0.58, 0.82, elapsed),
+    recoil: Math.max(
+      pulse(elapsed, 0.24, 0.08) * 0.32,
+      pulse(elapsed, 0.6, 0.1) * 0.58,
+      pulse(elapsed, 0.8, 0.12),
+    ),
     shake: impact * 0.08,
-    zoom: pulse(elapsed, 0.55, 0.28) * 0.85,
+    zoom: (pulse(elapsed, 0.52, 0.32) * 0.55) + (pulse(elapsed, 0.86, 0.18) * 0.35),
   };
 }
 
@@ -1318,7 +1331,11 @@ function updateFightEffects(fight, time) {
   arena3d.impactRing.scale.setScalar(0.5 + fight.impact * 1.4);
   arena3d.impactRing.rotation.z = time * 2.4;
 
-  arena3d.attackBeam.visible = arena3d.battling && fight.progress > 0.42 && fight.progress < 0.66;
+  arena3d.attackBeam.visible = arena3d.battling && (
+    (fight.progress > 0.18 && fight.progress < 0.28)
+    || (fight.progress > 0.53 && fight.progress < 0.66)
+    || (fight.progress > 0.74 && fight.progress < 0.9)
+  );
   arena3d.attackBeam.material.emissiveIntensity = 0.35 + fight.impact * 1.2;
   arena3d.attackBeam.scale.set(1, 0.55 + fight.impact * 0.55, 1);
   arena3d.attackBeam.rotation.z = fight.attackerSide < 0 ? Math.PI / 2 : -Math.PI / 2;
@@ -1353,12 +1370,19 @@ function moveFighter(fighter, side, time, wobble, fight) {
   if (arena3d.battling) {
     const isAttacker = fight.attackerSide === side;
     const isDefender = fight.defenderSide === side;
-    const approach = smoothstep(0.08, 0.32, fight.progress) * (1 - smoothstep(0.86, 1, fight.progress));
-    const lunge = isAttacker ? pulse(fight.progress, fight.progress < 0.48 ? 0.34 : 0.62, 0.12) : 0;
+    const approach = smoothstep(0.06, 0.28, fight.progress) * (1 - smoothstep(0.94, 1, fight.progress));
+    const strike = Math.max(
+      pulse(fight.progress, 0.22, 0.08),
+      pulse(fight.progress, 0.39, 0.08),
+      pulse(fight.progress, 0.58, 0.1),
+      pulse(fight.progress, 0.78, 0.12),
+      pulse(fight.progress, 0.91, 0.08),
+    );
+    const lunge = isAttacker ? strike : 0;
     const recoil = isDefender ? fight.recoil : 0;
 
-    x = baseX - side * approach * 0.58 - side * lunge * 0.78 + side * recoil * 0.52;
-    y = 0.48 + Math.abs(Math.sin(time * 8.5)) * 0.08 + lunge * 0.16;
+    x = baseX - side * approach * 0.64 - side * lunge * 0.56 + side * recoil * 0.42;
+    y = 0.48 + Math.abs(Math.sin(time * 5.6)) * 0.08 + lunge * 0.16;
     scale = 1 + lunge * 0.08 - recoil * 0.07;
     lean = wobble + side * (-lunge * 0.22 + recoil * 0.28);
 
@@ -1528,15 +1552,69 @@ function bestStat(creature) {
     .sort((a, b) => b.value - a.value)[0];
 }
 
+function pickLine(lines) {
+  return lines[Math.floor(Math.random() * lines.length)];
+}
+
+function arenaTactic(creature, arena) {
+  const isHome = creature.habitat.includes(arena.id);
+  const best = bestStat(creature);
+
+  if (isHome) {
+    return pickLine([
+      `${creature.name} uses the ${arena.name} like home turf and forces the angle it wants.`,
+      `${creature.name} settles into the ${arena.name}, moving like it practiced here all week.`,
+      `The arena favors ${creature.name}, and it starts turning that comfort into pressure.`,
+    ]);
+  }
+
+  if (best.label === 'speed') {
+    return `${creature.name} keeps circling, trying to win the round with speed instead of trading heavy hits.`;
+  }
+
+  if (best.label === 'smarts') {
+    return `${creature.name} slows the pace, reading the opening before committing to a risky move.`;
+  }
+
+  if (best.label === 'defense') {
+    return `${creature.name} shells up and waits for a mistake, letting its defense absorb the first rush.`;
+  }
+
+  return `${creature.name} tests the footing, looking for one clean lane through the ${arena.name}.`;
+}
+
+function statDuelLine(winner, loser) {
+  const winnerBest = bestStat(winner);
+  const loserBest = bestStat(loser);
+
+  if (winnerBest.label === loserBest.label) {
+    return `Both fighters lean on ${winnerBest.label}, but ${winner.name} gets cleaner timing when it matters.`;
+  }
+
+  return `${loser.name}'s ${loserBest.label} keeps it alive, but ${winner.name}'s ${winnerBest.label} starts taking over.`;
+}
+
 function replayLines(winner, loser, arena, margin) {
   const closeLine = margin < 6
-    ? `It was close enough that the scoreboard needed a dramatic drumroll.`
-    : `${winner.name} built a big lead before the snack break.`;
+    ? pickLine([
+      `The lead keeps changing hands, and the judges have to check the replay twice.`,
+      `Neither side runs away with it; every exchange changes the scoreboard a little.`,
+      `This one stays close enough that the final exchange actually matters.`,
+    ])
+    : pickLine([
+      `${winner.name} starts building a real lead once the matchup settles down.`,
+      `The longer it goes, the more the matchup tilts toward ${winner.name}.`,
+      `${loser.name} has moments, but ${winner.name} keeps stacking better exchanges.`,
+    ]);
 
   return [
-    `${loser.name} opened with ${loser.ability}, and the crowd made science noises.`,
-    `${winner.name} answered with ${winner.ability}, which worked especially well in the ${arena.name}.`,
+    `${loser.name} opens cautiously, then commits to ${loser.ability} to test the distance.`,
+    arenaTactic(winner, arena),
+    `${winner.name} answers with ${winner.ability}, but ${loser.name} does not fold right away.`,
+    statDuelLine(winner, loser),
+    `${loser.name} tries to reset the fight and steal momentum near the edge of the arena.`,
     closeLine,
+    `${winner.name} finds the cleanest opening of the round and turns it into the deciding move.`,
     `Lesson: matchups depend on habitat, body design, and special adaptations, not just who looks scarier.`,
   ];
 }
@@ -1550,8 +1628,12 @@ async function playSimulation(winner, loser, arena, lines) {
 
   const beats = [
     { badge: `${arena.name} doors open!`, burst: 'WHOOSH!' },
-    { badge: `${loser.name} tries ${loser.ability}`, burst: 'BONK!' },
-    { badge: `${winner.name} counters!`, burst: 'ZAP!' },
+    { badge: `${loser.name} probes first`, burst: 'STEP!' },
+    { badge: `${winner.name} claims position`, burst: 'SHIFT!' },
+    { badge: `${winner.name} tests a counter`, burst: 'CLASH!' },
+    { badge: 'Momentum swings again', burst: 'THUD!' },
+    { badge: 'The final exchange builds...', burst: 'DRUM!' },
+    { badge: `${winner.name} lands the deciding move`, burst: 'BOOM!' },
     { badge: 'Judges check the science notes...', burst: 'HMM!' },
   ];
 
@@ -1562,7 +1644,7 @@ async function playSimulation(winner, loser, arena, lines) {
       .slice(0, index + 1)
       .map((line, lineIndex) => `<li class="${lineIndex === index ? 'current' : ''}">${line}</li>`)
       .join('');
-    await sleep(1350);
+    await sleep(replayBeatMs);
   }
 }
 
